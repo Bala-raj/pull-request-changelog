@@ -3,7 +3,8 @@ import { exec } from '@actions/exec';
 import * as github from '@actions/github';
 import * as core from '@actions/core';
 import makeTemplate from './template';
-import { gitNoTag, changeFiles, getCommits, gitPrume } from './commands';
+import {gitNoTag, changeFiles, getCommits, gitPrune, getRemoteUrl} from './commands';
+import {listeners} from "cluster";
 
 const pull_request = github.context.payload.pull_request;
 const PR_ID = pull_request.number;
@@ -39,14 +40,42 @@ const postToGit = async (url, key, body) => {
       throw new Error('Missing branch');
     }
     console.log('Generating changelog....');
-    console.log(URL);
-    await exec(gitPrume);
-    await exec(gitNoTag);
+    console.log('Get remote URL')
+
+    let myError = '';
+    let remoteUrl = '';
+    await exec(getRemoteUrl, [], {
+      listeners: {
+        stdout: (data) => {
+          const splitted = data.toString().split('\n');
+          splitted.forEach((item) => {
+            if (item === '') {
+              return;
+            }
+            remoteUrl = item;
+          });
+        },
+        stderr: (data) => {
+          myError = `${myError}${data.toString()}`;
+        },
+      }
+    })
+    console.log('Remote url: ' + remoteUrl);
+
+    if (myError !== '') {
+      throw new Error(myError);
+    }
+
+    if (remoteUrl.indexOf('https://') == 0) {
+      remoteUrl = 'https://' + GITHUB_TOKEN + '@' + remoteUrl.substring(8);
+    }
+
+    await exec(gitPrune(remoteUrl));
+    await exec(gitNoTag(remoteUrl));
 
     // then we fetch the diff and grab the output
     let commits = {};
     let commitsStr = '';
-    let myError = '';
 
     // get diff between master and current branch
     await exec(getCommits(PR_ID, branch), [], {
