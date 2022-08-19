@@ -4,7 +4,6 @@ import * as github from '@actions/github';
 import * as core from '@actions/core';
 import makeTemplate from './template';
 import {gitNoTag, changeFiles, getCommits, gitPrune, getRemoteUrl} from './commands';
-import {listeners} from "cluster";
 
 const pull_request = github.context.payload.pull_request;
 const PR_ID = pull_request.number;
@@ -60,7 +59,6 @@ const postToGit = async (url, key, body) => {
         },
       }
     })
-    console.log('Remote url: ' + remoteUrl);
 
     if (myError !== '') {
       throw new Error(myError);
@@ -69,6 +67,8 @@ const postToGit = async (url, key, body) => {
     if (remoteUrl.indexOf('https://') == 0) {
       remoteUrl = 'https://' + GITHUB_TOKEN + '@' + remoteUrl.substring(8);
     }
+    console.log('Remote url: ' + remoteUrl);
+    console.log(pull_request);
 
     await exec(gitPrune(remoteUrl));
     await exec(gitNoTag(remoteUrl));
