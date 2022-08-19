@@ -39,7 +39,7 @@ const postToGit = async (url, key, body) => {
       throw new Error('Missing branch');
     }
     console.log('Generating changelog....');
-
+    console.log(URL);
     await exec(gitPrume);
     await exec(gitNoTag);
 
