@@ -129,7 +129,6 @@ const postToGit = async (url, key, body) => {
 
     const { changesTemplate, versionBumpType } = makeTemplate(commits);
 
-    await exec('chmod +x ./src/version-script.sh');
     await exec('ls -l',[currentVersion, (versionBumpType || 'bug')], {
       listeners: {
         stdout: (data) => {
@@ -140,6 +139,7 @@ const postToGit = async (url, key, body) => {
         },
       },
     });
+    await exec('chmod +x ./src/version-script.sh');
 
     await exec('./src/version-script.sh',[currentVersion, (versionBumpType || 'bug')], {
       listeners: {
