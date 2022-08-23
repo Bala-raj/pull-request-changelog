@@ -129,7 +129,7 @@ const postToGit = async (url, key, body) => {
 
     const { changesTemplate, versionBumpType } = makeTemplate(commits);
 
-    await exec('ls -l',[currentVersion, (versionBumpType || 'bug')], {
+    await exec('ls',["-l"], {
       listeners: {
         stdout: (data) => {
           console.log(data);
