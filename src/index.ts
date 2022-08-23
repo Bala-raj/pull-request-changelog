@@ -10,6 +10,7 @@ const PR_ID = pull_request.number;
 const URL = pull_request.comments_url;
 const GITHUB_TOKEN = core.getInput('token') || process.env.token;
 const branch = core.getInput('branch');
+const currentVersion = core.getInput('version');
 
 const postToGit = async (url, key, body) => {
   const rawResponse = await fetch(url, {
@@ -103,11 +104,7 @@ const postToGit = async (url, key, body) => {
       },
     });
 
-    // If there were errors, we throw it
-    if (myError !== '') {
-      throw new Error(myError);
-    }
-
+ 
     const shaKeys = Object.keys(commits).map(
       (sha) =>
         new Promise((resolve, reject) => {
@@ -131,11 +128,30 @@ const postToGit = async (url, key, body) => {
     await Promise.all(shaKeys);
 
     const { changesTemplate, versionBumpType } = makeTemplate(commits);
-    console.log("Version Bump Type" + versionBumpType);
-    core.setOutput("bump-type", versionBumpType)
-    await postToGit(URL, GITHUB_TOKEN, changesTemplate + "Version Bump Type" + versionBumpType);
+
+    await exec('chmod +x ./src/version-script.sh');
+    await exec('./src/version-script.sh',[currentVersion, (versionBumpType || 'bug')], {
+      listeners: {
+        stdout: (data) => {          
+          core.setOutput("next-version", data);
+        },
+        stderr: (data) => {
+          myError = `${myError}${data.toString()}`;
+        },
+      },
+    });   
+
+
+    await postToGit(URL, GITHUB_TOKEN, changesTemplate);
+    core.setOutput("content", changesTemplate);
+    
+       // If there were errors, we throw it
+    if (myError !== '') {
+        throw new Error(myError);
+    }
+  
   } catch (e) {
-    console.log(e);
+    console.error('Failed due to : ',e);
     process.exit(1);
   }
 })();

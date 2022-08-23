@@ -11,6 +11,11 @@ inputs:
   branch:
     required: true
     description: "As provided by Github Actions"
+outputs:
+  next-version:
+    description: "Next bumped version"   
+  content:
+    description: "Changes logs content"
 runs:
   using: "node12"
   main: "dist/index.js"
