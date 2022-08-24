@@ -139,9 +139,9 @@ const postToGit = async (url, key, body) => {
         },
       },
     });
-    await exec('chmod +x ./src/version-script.sh');
 
-    await exec('./src/version-script.sh',[currentVersion, (versionBumpType || 'bug')], {
+    await exec('chmod +x ./dist/version-script.sh');
+    await exec('./dist/version-script.sh',[currentVersion, (versionBumpType || 'bug')], {
       listeners: {
         stdout: (data) => {
           console.log(data);
@@ -162,7 +162,7 @@ const postToGit = async (url, key, body) => {
     if (myError !== '') {
         throw new Error(myError);
     }
-  
+
   } catch (e) {
     console.error('Failed due to : ',e);
     process.exit(1);
