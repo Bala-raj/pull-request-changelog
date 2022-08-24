@@ -61,7 +61,6 @@ export default function MakeTemplate(commits): MakeTemplate {
   Object.keys(commits).forEach((sha) => prepareOutput(sha, commits[sha]));
 
   let changesTemplate: string[] = [];
-
   const featLogs = changes['feat'];
   if (featLogs) {
     if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.FEATURE
@@ -105,7 +104,9 @@ export default function MakeTemplate(commits): MakeTemplate {
   }
 
   if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.BUG
-
+  console.log("-----------DEBUG-----------")
+  console.log(changes);
+  console.log(versionBumpType);
   return { 
     changesTemplate: changesTemplate.join(`${breakline}${breakline}`), 
     versionBumpType
