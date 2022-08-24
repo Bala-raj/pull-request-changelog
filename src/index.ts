@@ -42,6 +42,17 @@ const postToGit = async (url, key, body) => {
     console.log('Generating changelog....');
     console.log('Get remote URL')
 
+    await exec('ls',["-l"], {
+      listeners: {
+        stdout: (data) => {
+          console.log(data);
+        },
+        stderr: (data) => {
+          myError = `${myError}${data.toString()}`;
+        },
+      },
+    });
+
     let myError = '';
     let remoteUrl = '';
     await exec(getRemoteUrl, [], {
