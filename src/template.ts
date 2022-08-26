@@ -5,19 +5,8 @@ import { changesHeader, getHeader } from './headers';
 import { getMessageDetails } from './message';
 import { getMarkdownOfHead } from './markdown';
 
-const VERSION_FRAGMENT = {
-  MAJOR: "major",
-  FEATURE: "feature", 
-  BUG: "bug",
-  ALPHA: "alpha",
-  BETA: "beta",
-  RC: "rc"
-}
-
 const breakline = `
 `;
-
-let versionBumpType = "";
 
 let changes: IChanges[] = [];
 
@@ -54,60 +43,60 @@ const prepareOutput = (sha, contentObject) => {
 
 interface MakeTemplate {
   changesTemplate: string;
-  versionBumpType: string;
+  versionMask: number[];
 }
 
 export default function MakeTemplate(commits): MakeTemplate {
   Object.keys(commits).forEach((sha) => prepareOutput(sha, commits[sha]));
-
+  let versionMask: number[] = [];
   let changesTemplate: string[] = [];
 
   const featLogs = changes['feat'];
   if (featLogs) {
-    if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.FEATURE
+    if(versionMask.length == 0) versionMask = [1,0,0];
     changesTemplate.push(getMarkdownOfHead('## ✨ Features', featLogs));
   }
 
   const fixLogs = changes['fix'];
   if (fixLogs) {
-    if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.BUG
+    if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
     changesTemplate.push(getMarkdownOfHead('## 🐞 Fixes', fixLogs));
   }
 
   const refactorLogs = changes['refactor'];
   if (refactorLogs) {
-    if(versionBumpType.length > 0) versionBumpType = VERSION_FRAGMENT.BUG
+    if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
     changesTemplate.push(getMarkdownOfHead('## ♻️ Refactors', refactorLogs));
   }
 
   let testLogs = changes['test'];
   if (testLogs) {
-    if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.BUG
+    if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
     changesTemplate.push(getMarkdownOfHead('## 🧪 Tests', testLogs));
   }
 
   const ciLogs = changes['ci'];
   if (ciLogs) {
-    if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.BUG
+    if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
     changesTemplate.push(getMarkdownOfHead('## 🏗 CI', ciLogs));
   }
 
   const botLogs = changes['bot']
   if(botLogs) {
-    if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.RC
+    if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
   }
 
   const changesLogs = changes[changesHeader];
 
   if (changesLogs) {
-    if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.BUG
+    if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
     changesTemplate.push(getMarkdownOfHead('## 📋 Changes', changesLogs));
   }
 
-  if(versionBumpType.length == 0) versionBumpType = VERSION_FRAGMENT.BUG
+  if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
 
   return { 
-    changesTemplate: changesTemplate.join(`${breakline}${breakline}`), 
-    versionBumpType
+    changesTemplate: changesTemplate.join(`${breakline}${breakline}`),
+    versionMask
   };
 }

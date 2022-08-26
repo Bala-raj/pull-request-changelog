@@ -4,6 +4,7 @@ import * as github from '@actions/github';
 import * as core from '@actions/core';
 import makeTemplate from './template';
 import {gitNoTag, changeFiles, getCommits, gitPrune, getRemoteUrl} from './commands';
+import {bumpVersion} from "./version";
 
 const pull_request = github.context.payload.pull_request;
 const PR_ID = pull_request.number;
@@ -138,37 +139,13 @@ const postToGit = async (url, key, body) => {
 
     await Promise.all(shaKeys);
 
-    const { changesTemplate, versionBumpType } = makeTemplate(commits);
-
-    await exec('ls',["-l"], {
-      listeners: {
-        stdout: (data) => {
-          console.log(data);
-        },
-        stderr: (data) => {
-          myError = `${myError}${data.toString()}`;
-        },
-      },
-    });
-
-    await exec('chmod +x ./dist/version-script.sh');
-    await exec('./dist/version-script.sh',[currentVersion, (versionBumpType || 'bug')], {
-      listeners: {
-        stdout: (data) => {
-          console.log(data);
-          console.log("setting next version");
-          core.setOutput("next-version", data);
-        },
-        stderr: (data) => {
-          myError = `${myError}${data.toString()}`;
-        },
-      },
-    });   
-
+    const { changesTemplate, versionMask } = makeTemplate(commits);
+    const nextVersion = bumpVersion(versionMask, currentVersion);
 
     await postToGit(URL, GITHUB_TOKEN, changesTemplate);
     core.setOutput("content", changesTemplate);
-    
+    core.setOutput("next-version", nextVersion);
+
        // If there were errors, we throw it
     if (myError !== '') {
         throw new Error(myError);
