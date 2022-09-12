@@ -11,6 +11,9 @@ inputs:
   branch:
     required: true
     description: "As provided by Github Actions"
+  version:
+    required: false
+    description: "Current version"
 outputs:
   next-version:
     description: "Next bumped version"   

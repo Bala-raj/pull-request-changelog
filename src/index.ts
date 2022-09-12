@@ -140,11 +140,18 @@ const postToGit = async (url, key, body) => {
     await Promise.all(shaKeys);
 
     const { changesTemplate, versionMask } = makeTemplate(commits);
-    const nextVersion = bumpVersion(versionMask, currentVersion);
+
 
     await postToGit(URL, GITHUB_TOKEN, changesTemplate);
     core.setOutput("content", changesTemplate);
-    core.setOutput("next-version", nextVersion);
+    
+    if(currentVersion) {
+      const nextVersion = bumpVersion(versionMask, currentVersion);
+      core.setOutput("next-version", nextVersion);
+      console.log("New version: ", nextVersion);
+    } else {
+      console.log("Ignored to bump new version due to invalid current version")
+    }
 
        // If there were errors, we throw it
     if (myError !== '') {
