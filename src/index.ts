@@ -82,7 +82,6 @@ const postToGit = async (url, key, body) => {
     // then we fetch the diff and grab the output
     let commits = {};
     let commitsStr = '';
-    let myError = '';
 
     // get diff between master and current branch
     await exec(getCommits(baseBranch, headBranch), [], {
