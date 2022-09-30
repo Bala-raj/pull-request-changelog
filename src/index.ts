@@ -7,6 +7,8 @@ import {gitNoTag, changeFiles, getCommits, gitPrune, getRemoteUrl} from './comma
 import {bumpVersion} from "./version";
 
 const pull_request = github.context.payload.pull_request;
+const baseBranch = process.env.BASE_BRANCH;
+const headBranch = process.env.HEAD_BRANCH;
 const PR_ID = pull_request.number;
 const URL = pull_request.comments_url;
 const GITHUB_TOKEN = core.getInput('token') || process.env.token;
@@ -83,7 +85,7 @@ const postToGit = async (url, key, body) => {
     let myError = '';
 
     // get diff between master and current branch
-    await exec(getCommits(PR_ID, branch), [], {
+    await exec(getCommits(baseBranch, headBranch), [], {
       listeners: {
         stdout: (data) => {
           const splitted = data.toString().split('\n');

@@ -15,6 +15,16 @@ let changes: IChanges[] = [];
 //
 //
 
+const constructChangedFiles = (contentObject) => {
+  if (contentObject.files && Array.isArray(contentObject.files)) {
+    return `${breakline}#### Changed files${breakline}${contentObject.files
+        .map((file) => `- ${file}`)
+        .join('\n')}`
+  } else {
+    return '';
+  }
+}
+
 const prepareOutput = (sha, contentObject) => {
   const { prefix, heading, message } = getMessageDetails(contentObject.message);
 
@@ -34,9 +44,7 @@ const prepareOutput = (sha, contentObject) => {
     scope: heading || 'no-scope',
     message: `<details>
     <summary>${sha.substr(0, 7)} - ${showPrefix}${message}</summary>
-    ${breakline}#### Changed files${breakline}${contentObject.files
-      .map((file) => `- ${file}`)
-      .join('\n')}
+    ${constructChangedFiles(contentObject)}
   </details>`,
   });
 };
@@ -95,7 +103,7 @@ export default function MakeTemplate(commits): MakeTemplate {
 
   if(versionMask.length == 0) versionMask = versionMask = [0,0,1];
 
-  return { 
+  return {
     changesTemplate: changesTemplate.join(`${breakline}${breakline}`),
     versionMask
   };
