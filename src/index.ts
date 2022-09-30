@@ -3,10 +3,13 @@ import { exec } from '@actions/exec';
 import * as github from '@actions/github';
 import * as core from '@actions/core';
 import makeTemplate from './template';
-import { gitNoTag, changeFiles, getCommits, gitPrume } from './commands';
+import {gitNoTag, changeFiles, gitPrune, getRemoteUrl} from './commands';
 import {bumpVersion} from "./version";
 
 const pull_request = github.context.payload.pull_request;
+const repository = github.context.payload.repository;
+const baseBranch = process.env.BASE_BRANCH;
+const headBranch = process.env.HEAD_BRANCH;
 const PR_ID = pull_request.number;
 const URL = pull_request.comments_url;
 const GITHUB_TOKEN = core.getInput('token') || process.env.token;
@@ -41,17 +44,13 @@ const postToGit = async (url, key, body) => {
       throw new Error('Missing branch');
     }
     console.log('Generating changelog....');
+    console.log(`Current version: ${currentVersion}`);
+    console.log(`Branch: ${branch}`)
+    console.log('Get remote URL')
 
-    await exec(gitPrume);
-    await exec(gitNoTag);
-
-    // then we fetch the diff and grab the output
-    let commits = {};
-    let commitsStr = '';
     let myError = '';
-
-    // get diff between master and current branch
-    await exec(getCommits(PR_ID, branch), [], {
+    let remoteUrl = '';
+    await exec(getRemoteUrl, [], {
       listeners: {
         stdout: (data) => {
           const splitted = data.toString().split('\n');
@@ -59,60 +58,90 @@ const postToGit = async (url, key, body) => {
             if (item === '') {
               return;
             }
-            const sha = item.substr(0, 40);
-            if (sha === '') {
-              return;
-            }
-            const message = item.substr(41);
-            commits[sha] = { message };
+            remoteUrl = item;
           });
-
-          // remove
-          commitsStr = `${commitsStr}${data.toString()}`;
         },
         stderr: (data) => {
           myError = `${myError}${data.toString()}`;
         },
-      },
+      }
+    })
+
+    if (myError !== '') {
+      throw new Error(myError);
+    }
+
+    if (remoteUrl.indexOf('https://') == 0) {
+      remoteUrl = 'https://' + GITHUB_TOKEN + '@' + remoteUrl.substring(8);
+    }
+    console.log('Remote url: ' + remoteUrl);
+    console.log(pull_request);
+
+    await exec(gitPrune(remoteUrl));
+    await exec(gitNoTag(remoteUrl));
+
+    // then we fetch the diff and grab the output
+    let commitsStr = '';
+
+    const octokit = github.getOctokit(GITHUB_TOKEN);
+    let commitResponse = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+      owner: repository.owner.login,
+      repo: repository.name,
+      pull_number: PR_ID
     });
 
- 
+    let commits = {};
+    commitResponse.data.forEach((value) => {
+      if (!commits[value.sha]) {
+        commits[value.sha] = {};
+      }
+      commits[value.sha].message = value.commit.message;
+    });
+
     const shaKeys = Object.keys(commits).map(
       (sha) =>
-        new Promise((resolve, reject) => {
           exec(changeFiles(sha), [], {
             listeners: {
               stdout: (data) => {
                 commits[sha].files = data
-                  .toString()
-                  .split('\n')
-                  .filter((i) => i);
-                resolve(undefined);
+                    .toString()
+                    .split('\n')
+                    .filter((i) => i);
               },
               stderr: (data) => {
-                myError = `${myError}${data.toString()}`;
+                console.log(`${myError}${data.toString()}`)
               },
             },
-          });
-        }),
+          })
     );
 
     await Promise.all(shaKeys);
 
+    console.log('Create change log');
     const { changesTemplate, versionMask } = makeTemplate(commits);
-    const nextVersion = bumpVersion(versionMask, currentVersion);
+    console.log(`Generated change log: ${changesTemplate}`);
 
+    console.log('Posting change log to git comments');
     await postToGit(URL, GITHUB_TOKEN, changesTemplate);
+    console.log('Setting change log as content output');
     core.setOutput("content", changesTemplate);
-    core.setOutput("next-version", nextVersion);
+
+    console.log('Calculating next-version');
+    if(currentVersion) {
+      const nextVersion = bumpVersion(versionMask, currentVersion);
+      core.setOutput("next-version", nextVersion);
+      console.log("New version: ", nextVersion);
+    } else {
+      console.log("Ignored to bump new version due to invalid current version")
+    }
 
        // If there were errors, we throw it
     if (myError !== '') {
         throw new Error(myError);
     }
-  
-    
+
   } catch (e) {
+    console.log('Error found: ', e);
     console.error('Failed due to : ',e);
     process.exit(1);
   }
