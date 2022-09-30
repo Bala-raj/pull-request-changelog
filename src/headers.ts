@@ -8,6 +8,7 @@ const headers = {
   'ci:': 'ci',
   'test:': 'test',
   'refactor:': 'refactor',
+  'major:': 'major',
 };
 
 export const getHeader = (prefix: string): string =>

@@ -3,10 +3,11 @@ import { exec } from '@actions/exec';
 import * as github from '@actions/github';
 import * as core from '@actions/core';
 import makeTemplate from './template';
-import {gitNoTag, changeFiles, getCommits, gitPrune, getRemoteUrl} from './commands';
+import {gitNoTag, changeFiles, gitPrune, getRemoteUrl} from './commands';
 import {bumpVersion} from "./version";
 
 const pull_request = github.context.payload.pull_request;
+const repository = github.context.payload.repository;
 const baseBranch = process.env.BASE_BRANCH;
 const headBranch = process.env.HEAD_BRANCH;
 const PR_ID = pull_request.number;
@@ -80,34 +81,21 @@ const postToGit = async (url, key, body) => {
     await exec(gitNoTag(remoteUrl));
 
     // then we fetch the diff and grab the output
-    let commits = {};
     let commitsStr = '';
 
-    // get diff between master and current branch
-    await exec(getCommits(baseBranch, headBranch), [], {
-      listeners: {
-        stdout: (data) => {
-          const splitted = data.toString().split('\n');
-          splitted.forEach((item) => {
-            if (item === '') {
-              return;
-            }
-            const sha = item.substr(0, 40);
-            if (sha === '') {
-              return;
-            }
-            const message = item.substr(41);
-            commits[sha] = { message };
-          });
+    const octokit = github.getOctokit(GITHUB_TOKEN);
+    let commitResponse = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+      owner: repository.owner.login,
+      repo: repository.name,
+      pull_number: PR_ID
+    });
 
-          // remove
-          commitsStr = `${commitsStr}${data.toString()}`;
-        },
-        stderr: (data) => {
-          console.log(`${myError}${data.toString()}`)
-          myError = `${myError}${data.toString()}`;
-        },
-      },
+    let commits = {};
+    commitResponse.data.forEach((value) => {
+      if (!commits[value.sha]) {
+        commits[value.sha] = {};
+      }
+      commits[value.sha].message = value.commit.message;
     });
 
     const shaKeys = Object.keys(commits).map(
@@ -131,6 +119,7 @@ const postToGit = async (url, key, body) => {
 
     console.log('Create change log');
     const { changesTemplate, versionMask } = makeTemplate(commits);
+    console.log(`Generated change log: ${changesTemplate}`);
 
     console.log('Posting change log to git comments');
     await postToGit(URL, GITHUB_TOKEN, changesTemplate);
