@@ -131,7 +131,6 @@ const postToGit = async (url, key, body) => {
 
     console.log('Create change log');
     const { changesTemplate, versionMask } = makeTemplate(commits);
-    console.log(`Generated change log: ${changesTemplate}`);
 
     console.log('Posting change log to git comments');
     await postToGit(URL, GITHUB_TOKEN, changesTemplate);
