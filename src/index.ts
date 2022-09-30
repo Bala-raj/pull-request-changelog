@@ -41,18 +41,9 @@ const postToGit = async (url, key, body) => {
       throw new Error('Missing branch');
     }
     console.log('Generating changelog....');
+    console.log(`Current version: ${currentVersion}`);
+    console.log(`Branch: ${branch}`)
     console.log('Get remote URL')
-
-    await exec('ls',["-l"], {
-      listeners: {
-        stdout: (data) => {
-          console.log(data);
-        },
-        stderr: (data) => {
-          myError = `${myError}${data.toString()}`;
-        },
-      },
-    });
 
     let myError = '';
     let remoteUrl = '';
@@ -89,6 +80,7 @@ const postToGit = async (url, key, body) => {
     // then we fetch the diff and grab the output
     let commits = {};
     let commitsStr = '';
+    let myError = '';
 
     // get diff between master and current branch
     await exec(getCommits(PR_ID, branch), [], {
@@ -111,40 +103,41 @@ const postToGit = async (url, key, body) => {
           commitsStr = `${commitsStr}${data.toString()}`;
         },
         stderr: (data) => {
+          console.log(`${myError}${data.toString()}`)
           myError = `${myError}${data.toString()}`;
         },
       },
     });
 
- 
     const shaKeys = Object.keys(commits).map(
       (sha) =>
-        new Promise((resolve, reject) => {
           exec(changeFiles(sha), [], {
             listeners: {
               stdout: (data) => {
                 commits[sha].files = data
-                  .toString()
-                  .split('\n')
-                  .filter((i) => i);
-                resolve(undefined);
+                    .toString()
+                    .split('\n')
+                    .filter((i) => i);
               },
               stderr: (data) => {
-                myError = `${myError}${data.toString()}`;
+                console.log(`${myError}${data.toString()}`)
               },
             },
-          });
-        }),
+          })
     );
 
     await Promise.all(shaKeys);
 
+    console.log('Create change log');
     const { changesTemplate, versionMask } = makeTemplate(commits);
+    console.log(`Generated change log: ${changesTemplate}`);
 
-
+    console.log('Posting change log to git comments');
     await postToGit(URL, GITHUB_TOKEN, changesTemplate);
+    console.log('Setting change log as content output');
     core.setOutput("content", changesTemplate);
-    
+
+    console.log('Calculating next-version');
     if(currentVersion) {
       const nextVersion = bumpVersion(versionMask, currentVersion);
       core.setOutput("next-version", nextVersion);
@@ -159,6 +152,7 @@ const postToGit = async (url, key, body) => {
     }
 
   } catch (e) {
+    console.log('Error found: ', e);
     console.error('Failed due to : ',e);
     process.exit(1);
   }
