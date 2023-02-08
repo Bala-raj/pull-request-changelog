@@ -110,9 +110,9 @@
   dependencies:
     "@octokit/openapi-types" "^12.11.0"
 
-"@types/node@^14.11.2":
-  version "14.18.21"
-  resolved "https://registry.npmjs.org/@types/node/-/node-14.18.21.tgz"
+"@types/node@^18.13.0":
+  version "18.13.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.13.0.tgz#0400d1e6ce87e9d3032c19eb6c58205b0d3f7850"
 
 "@zeit/ncc@^0.22.3":
   version "0.22.3"
